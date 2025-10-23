@@ -7,7 +7,10 @@ you can add multi-language support to your application in a simple and efficient
 ### 📦 Features
 - Native support for JSON files as translation source.
 - Compatible with any type of .NET application (APIs, console, web and desktop applications).
-- App Translator settings can be made through: AppSettings, Environment Variables
+- App Translator settings can be made through: AppSettings, Environment Variables and Options
+- Support for multiple files per language.
+- Support for contexts.
+- Support for fallback messages.
 - Mensagens de fallback para strings não traduzidas.
 - Fallback messages for untranslated strings.
 
@@ -59,6 +62,20 @@ builder
 builder
     .Services
     .AddAppTranslator();
+``` 
+
+- Using Option
+```csharp
+builder
+    .Services
+    .AddAppTranslator(new TranslatorOptions()
+    {
+        ResourcesPath = "Locales",
+        ResourceName = "Locale",
+        Languages = "pt-BR,en-US",
+        DefaultLanguage = "en-US",
+        DefaultContext = "",
+    });;
 ``` 
 
 👉 **Step 3** - Create Folder and files 

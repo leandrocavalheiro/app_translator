@@ -6,7 +6,7 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
     <PropertyGroup>
-        <VersionSuffix>1.0.0</VersionSuffix>
+        <VersionSuffix>1.0.1</VersionSuffix>
         <AssemblyVersion>$(VersionSuffix)</AssemblyVersion>
         <Version>$(VersionSuffix)</Version>
         <Company>WeNerds</Company>
