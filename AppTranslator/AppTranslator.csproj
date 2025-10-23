@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    </PropertyGroup>
+    <PropertyGroup>
+        <VersionSuffix>1.0.0</VersionSuffix>
+        <AssemblyVersion>$(VersionSuffix)</AssemblyVersion>
+        <Version>$(VersionSuffix)</Version>
+        <Company>WeNerds</Company>
+        <Authors>Leandro Luiz G. Cavalheiro</Authors>
+        <Copyright>Copyright ©WeNerds</Copyright>
+        <Product>App Translator</Product>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Description>[WIP] A lib for translaction</Description>
+        <RepositoryUrl>https://github.com/leandrocavalheiro/app_translator</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Localization" Version="2.3.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.10" />
+        <None Include="..\AppTranslator\README.md" Pack="true" PackagePath="$(PackageReadmeFile)" />
+    </ItemGroup>
+
+</Project>
