@@ -14,6 +14,7 @@ public static class AppTranslatorConstants
     public const string DefaultResourcesName = "Locale";
     public const string DefaultListLanguages = "pt-BR";
     public const string DefaultLanguage = "pt-BR";
+    public const string HttpClientName = "AppTranslator";
     public static JsonSerializerOptions GetSerializeOptions(bool formatted = true)
         => new ()
         {
