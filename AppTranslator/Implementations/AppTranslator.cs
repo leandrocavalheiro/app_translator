@@ -11,7 +11,7 @@ namespace AppTranslator.Implementations;
 
 public class AppTranslator : IAppTranslator
 {
-    public event Action? LanguageChanged;
+    public event Action LanguageChanged;
     private static readonly ConcurrentDictionary<string, Dictionary<string, string>> _cache = new();
 
     private Dictionary<string, string> _localizations = [];
@@ -22,7 +22,7 @@ public class AppTranslator : IAppTranslator
     private string _resourceName;
     private string _culture;
 
-    private readonly HttpClient? _httpClient;
+    private readonly HttpClient _httpClient;
 
     private bool _isInitialized;
 
