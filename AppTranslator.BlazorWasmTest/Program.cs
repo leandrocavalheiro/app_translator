@@ -27,7 +27,8 @@ builder
         DefaultLanguage = "pt-BR",
         DefaultContext = ""
     }, 
-        true);
+    isWasm: true,
+    serviceLifetime: ServiceLifetime.Singleton); 
 
 var host = builder.Build();
 

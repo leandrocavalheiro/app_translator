@@ -17,6 +17,7 @@
 
     <ItemGroup>
       <Content Remove="Locales\Locale.pt-BR.json" />
+      <EmbeddedResource Include="Locales\Locale.en-US.json" />
       <EmbeddedResource Include="Locales\Locale.pt-BR.json" />
     </ItemGroup>
 </Project>
