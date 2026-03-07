@@ -4,6 +4,9 @@ namespace AppTranslator.Interfaces;
 
 public interface IAppTranslator : IStringLocalizer
 {
+ 
+     event Action? LanguageChanged;
+     
     void Initialize();
 
     Task PreloadAsync();

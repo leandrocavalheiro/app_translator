@@ -1,3 +1,6 @@
 {
-  "hello": "Hello, WASM App"
+  "hello": "Hello, WASM App",
+  "weather": "Weather",
+  "counter": "Counter",
+  "home": "Home"
 }

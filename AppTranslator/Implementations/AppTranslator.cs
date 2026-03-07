@@ -11,6 +11,7 @@ namespace AppTranslator.Implementations;
 
 public class AppTranslator : IAppTranslator
 {
+    public event Action? LanguageChanged;
     private static readonly ConcurrentDictionary<string, Dictionary<string, string>> _cache = new();
 
     private Dictionary<string, string> _localizations = [];
@@ -89,6 +90,7 @@ public class AppTranslator : IAppTranslator
             await LoadLanguageAsync(culture);
 
         _localizations = _cache[BuildCacheKey(culture)];
+        LanguageChanged?.Invoke();
     }
 
     public void SetLanguage(string culture)
@@ -102,6 +104,7 @@ public class AppTranslator : IAppTranslator
             LoadLanguageSync(culture);
 
         _localizations = _cache[BuildCacheKey(culture)];
+        LanguageChanged?.Invoke();
     }
 
     private async Task LoadLanguageAsync(string culture)
