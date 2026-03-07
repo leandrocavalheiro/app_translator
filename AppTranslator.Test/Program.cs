@@ -11,7 +11,8 @@ builder.Services.AddAppTranslator(
         ResourcesPath = "Locales",
         Languages = "pt-BR,en-US",
         DefaultLanguage = "pt-BR",
-        DefaultContext = ""
+        DefaultContext = "",
+        LoadAllLocaleResources = true
     },
     false
 );

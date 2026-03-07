@@ -19,6 +19,8 @@ public class Worker : BackgroundService
         
         
         Console.WriteLine(_translator["hello"]);
+        _translator.SetLanguage("en-US");
+        Console.WriteLine(_translator["hello"]);
         
         
     }

@@ -53,6 +53,7 @@ public static class TranslatorConfigurations
             options.Languages = configuration.GetAppTranslatorListLanguages();
             options.DefaultLanguage = configuration.GetAppTranslatorDefaultLanguage();
             options.DefaultContext = configuration.GetAppTranslatorDefaultContext();
+            options.LoadAllLocaleResources = configuration.GetAppTranslatorLoadAllLocaleResources();
         });
         
         return services.Register(isWasm, httpClientName, serviceLifetime);
@@ -96,6 +97,7 @@ public static class TranslatorConfigurations
             options.DefaultRequestCulture = new (defaultLanguage);
             options.SupportedCultures = languages;
             options.SupportedUICultures = languages;
+            
         });
         
         services.Configure(delegate (TranslatorOptions options)
@@ -105,6 +107,7 @@ public static class TranslatorConfigurations
             options.Languages = defaultLanguageList;
             options.DefaultLanguage = defaultLanguage;
             options.DefaultContext = defaultContext;
+            options.LoadAllLocaleResources = translatorOptions.LoadAllLocaleResources;
         });
         
         return services.Register(isWasm, httpClientName, serviceLifetime);

@@ -1,9 +1,12 @@
 ﻿@page "/weather"
+@using AppTranslator.Interfaces
 @inject HttpClient Http
+@inject IAppTranslator Translator
 
 <PageTitle>Weather</PageTitle>
 
 <h1>Weather</h1>
+<h3>@Translator["hello"]</h3>
 
 <p>This component demonstrates fetching data from the server.</p>
 
@@ -43,6 +46,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await Translator.SetLanguageAsync("en-US");
         forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
     }
 

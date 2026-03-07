@@ -43,5 +43,12 @@ public static class ConfigurationExtensions
         => configuration.ValueOrDefault(
             AppTranslatorConstants.EnvDefaultContext, 
             "");
+
+    public static bool GetAppTranslatorLoadAllLocaleResources(this IConfiguration configuration)
+    {
+        var result = configuration.ValueOrDefault(AppTranslatorConstants.EnvLoadAllLocaleResources, "false"); 
+        return result == "true";
+    }
+
     #endregion
 }

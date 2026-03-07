@@ -6,4 +6,5 @@ public class TranslatorOptions{
     public string Languages { get; set; }
     public string DefaultLanguage { get; set; }
     public string DefaultContext { get; set; }
+    public bool LoadAllLocaleResources { get; set; }
 }
