@@ -46,7 +46,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await Translator.SetLanguageAsync("en-US");
+        //await Translator.SetLanguageAsync("en-US");
         forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
     }
 

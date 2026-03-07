@@ -1,19 +1,32 @@
 ﻿@page "/counter"
-
+@using AppTranslator.Interfaces
+@inject IAppTranslator Translator
 <PageTitle>Counter</PageTitle>
 
 <h1>Counter</h1>
 
-<p role="status">Current count: @currentCount</p>
+<h3>@Translator["hello"]</h3>
 
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
+    
+    protected override async Task OnInitializedAsync()
     {
-        currentCount++;
+        await Translator.SetLanguageAsync("pt-BR");
+        Translator.LanguageChanged += OnLanguageChanged;
+        
     }
-
+    private async Task IncrementCount()
+    {
+        await Translator.SetLanguageAsync("en-US");
+    }
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+    public void Dispose()
+{
+    Translator.LanguageChanged -= OnLanguageChanged;
+}
 }

@@ -1,3 +1,6 @@
 {
-  "hello": "Olá, Aplicação WASM "
+  "hello": "Olá, Aplicação WASM ",
+  "weather": "Clima",
+  "counter": "Contador",
+  "home": "Home BR"
 }
