@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 
 namespace AppTranslator.Configurations;
 
@@ -15,23 +16,28 @@ public static class TranslatorConfigurations
 {
     public static IServiceCollection AddAppTranslator(
         this IServiceCollection services,
+        bool isWasm = false,
+        string httpClientName = AppTranslatorConstants.HttpClientName,
         ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
-        return serviceLifetime switch
-        {
-            ServiceLifetime.Transient => services.AddTransient<IAppTranslator, Implementations.AppTranslator>(),
-            ServiceLifetime.Singleton => services.AddSingleton<IAppTranslator, Implementations.AppTranslator>(),
-            _ => services.AddScoped<IAppTranslator, Implementations.AppTranslator>()
-        };
+        return services.Register(isWasm, httpClientName, serviceLifetime);
     }
-    public static IServiceCollection AddAppTranslator(this IServiceCollection services, IConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    
+    public static IServiceCollection AddAppTranslator(
+        this IServiceCollection services, 
+        IConfiguration configuration,
+        bool isWasm = false,
+        string httpClientName = AppTranslatorConstants.HttpClientName,
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
-        string resourcePath = configuration.GetAppTranslatorResourcesPath();
-        string defaultLanguage = configuration.GetAppTranslatorDefaultLanguage();
+        var resourcePath = configuration.GetAppTranslatorResourcesPath();
+        var defaultLanguage = configuration.GetAppTranslatorDefaultLanguage();
+        
         services.AddLocalization(delegate (LocalizationOptions options)
         {
             options.ResourcesPath = resourcePath;
         });
+        
         services.Configure(delegate (RequestLocalizationOptions options)
         {
             CultureInfo[] languages = GetLanguages(configuration);
@@ -39,6 +45,7 @@ public static class TranslatorConfigurations
             options.SupportedCultures = languages;
             options.SupportedUICultures = languages;
         });
+        
         services.Configure(delegate (TranslatorOptions options)
         {
             options.ResourcesPath = configuration.GetAppTranslatorResourcesPath();
@@ -46,27 +53,22 @@ public static class TranslatorConfigurations
             options.Languages = configuration.GetAppTranslatorListLanguages();
             options.DefaultLanguage = configuration.GetAppTranslatorDefaultLanguage();
             options.DefaultContext = configuration.GetAppTranslatorDefaultContext();
+            options.LoadAllLocaleResources = configuration.GetAppTranslatorLoadAllLocaleResources();
         });
-        switch (serviceLifetime)
-        {
-            case ServiceLifetime.Transient:
-                services.AddTransient<IAppTranslator, Implementations.AppTranslator>();
-                break;
-            case ServiceLifetime.Singleton:
-                services.AddSingleton<IAppTranslator, Implementations.AppTranslator>();
-                break;
-            default:
-                services.AddScoped<IAppTranslator, Implementations.AppTranslator>();
-                break;
-        }
-        return services;
+        
+        return services.Register(isWasm, httpClientName, serviceLifetime);
     }
-    public static IServiceCollection AddAppTranslator(this IServiceCollection services, TranslatorOptions translatorOptions, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    
+    public static IServiceCollection AddAppTranslator(
+        this IServiceCollection services, 
+        TranslatorOptions translatorOptions, 
+        bool isWasm = false,
+        string httpClientName = AppTranslatorConstants.HttpClientName,
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         var resourcePath = string.IsNullOrEmpty(translatorOptions.ResourcesPath) 
             ? AppTranslatorConstants.DefaultResourcesPath 
             : translatorOptions.ResourcesPath; 
-
         
         var resourceName = string.IsNullOrEmpty(translatorOptions.ResourceName) 
             ? AppTranslatorConstants.DefaultResourcesName 
@@ -88,13 +90,16 @@ public static class TranslatorConfigurations
         {
             options.ResourcesPath = resourcePath;
         });
+        
         services.Configure(delegate (RequestLocalizationOptions options)
         {
             CultureInfo[] languages = GetLanguages(translatorOptions);
             options.DefaultRequestCulture = new (defaultLanguage);
             options.SupportedCultures = languages;
             options.SupportedUICultures = languages;
+            
         });
+        
         services.Configure(delegate (TranslatorOptions options)
         {
             options.ResourcesPath = resourcePath;
@@ -102,21 +107,12 @@ public static class TranslatorConfigurations
             options.Languages = defaultLanguageList;
             options.DefaultLanguage = defaultLanguage;
             options.DefaultContext = defaultContext;
+            options.LoadAllLocaleResources = translatorOptions.LoadAllLocaleResources;
         });
-        switch (serviceLifetime)
-        {
-            case ServiceLifetime.Transient:
-                services.AddTransient<IAppTranslator, Implementations.AppTranslator>();
-                break;
-            case ServiceLifetime.Singleton:
-                services.AddSingleton<IAppTranslator, Implementations.AppTranslator>();
-                break;
-            default:
-                services.AddScoped<IAppTranslator, Implementations.AppTranslator>();
-                break;
-        }
-        return services;
+        
+        return services.Register(isWasm, httpClientName, serviceLifetime);
     }    
+    
     private static CultureInfo[] GetLanguages(IConfiguration configuration)
     {
         var listLanguages = configuration.GetAppTranslatorListLanguages();
@@ -134,6 +130,7 @@ public static class TranslatorConfigurations
         };
         return array;
     }
+    
     private static CultureInfo[] GetLanguages(TranslatorOptions option)
     {
         var listLanguages = string.IsNullOrEmpty(option.Languages) 
@@ -156,5 +153,57 @@ public static class TranslatorConfigurations
             SupportedUICultures = array
         };
         return array;
-    }      
+    }
+    
+    private static Func<IServiceProvider, IAppTranslator> CreateAppTranslatorFactory(
+        bool isWasm = false, 
+        string httpClientName = AppTranslatorConstants.HttpClientName)
+    {
+        return sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<TranslatorOptions>>();
+        
+            if (isWasm)
+            {
+                
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(httpClientName);
+
+                var translator = new Implementations.AppTranslator(options, httpClient);
+                // NÃO chama Initialize aqui - será feito no Program.cs
+                return translator;
+            }
+            else
+            {
+                var translator = new Implementations.AppTranslator(options);
+                translator.Initialize(); // Server inicializa síncrono normalmente
+                return translator;
+            }
+        };
+    }
+
+    public static IServiceCollection Register(
+        this IServiceCollection services,
+        bool isWasm = false,
+        string httpClientName = AppTranslatorConstants.HttpClientName,
+        ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    {
+        var factory = CreateAppTranslatorFactory(isWasm, httpClientName);
+    
+        switch (serviceLifetime)
+        {
+            case ServiceLifetime.Transient:
+                services.AddTransient(factory);
+                break;
+            case ServiceLifetime.Singleton:
+                services.AddSingleton(factory);
+                break;
+            case ServiceLifetime.Scoped:
+            default:
+                services.AddScoped(factory);
+                break;
+        }
+
+        return services;
+    }
 }

@@ -10,10 +10,12 @@ public static class AppTranslatorConstants
     public const string EnvListLanguages = "APP_TRANSLATOR_LIST_LANGUAGES";
     public const string EnvDefaultLanguage = "APP_TRANSLATOR_DEFAULT_LANGUAGE";
     public const string EnvDefaultContext = "APP_TRANSLATOR_DEFAULT_CONTEXT";
+    public const string EnvLoadAllLocaleResources = "APP_LOAD_ALL_LOCALE_RESOURCES";
     public const string DefaultResourcesPath = "Locales";
     public const string DefaultResourcesName = "Locale";
     public const string DefaultListLanguages = "pt-BR";
     public const string DefaultLanguage = "pt-BR";
+    public const string HttpClientName = "AppTranslator";
     public static JsonSerializerOptions GetSerializeOptions(bool formatted = true)
         => new ()
         {

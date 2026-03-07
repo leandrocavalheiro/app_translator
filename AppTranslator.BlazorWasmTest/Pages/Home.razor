@@ -1,0 +1,20 @@
+﻿@page "/"
+@using AppTranslator.Interfaces
+@inject IAppTranslator Translator
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+<h3>@Translator["hello"]</h3>
+
+Welcome to your new app.
+
+@code{
+
+        protected override async Task OnInitializedAsync()
+    {
+        await Translator.SetLanguageAsync("pt-BR");
+        
+    }
+
+}

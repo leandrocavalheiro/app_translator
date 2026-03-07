@@ -4,8 +4,23 @@ namespace AppTranslator.Interfaces;
 
 public interface IAppTranslator : IStringLocalizer
 {
-    Implementations.AppTranslator SetContext(string context);
-    Implementations.AppTranslator SetFileResource(string path, string name, string context = null, string culture = null);
+    void Initialize();
+
+    Task PreloadAsync();
+
+    Task SetLanguageAsync(string culture);
+
+    void SetLanguage(string culture);
+
+    IAppTranslator SetContext(string context);
+
+    IAppTranslator SetFileResource(
+        string path,
+        string name,
+        string context = null,
+        string culture = null);
+
+    string CurrentCulture { get; }
 }
 
 

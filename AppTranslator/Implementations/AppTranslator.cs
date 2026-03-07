@@ -1,94 +1,182 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Concurrent;
+using System.Text.Json;
 using AppTranslator.Dtos;
+using AppTranslator.Extensions;
 using AppTranslator.Interfaces;
 using AppTranslator.Utils;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using System.Text.Json.Serialization;
-using AppTranslator.Extensions;
 
 namespace AppTranslator.Implementations;
 
 public class AppTranslator : IAppTranslator
 {
-    private Dictionary<string, string> _localizations;
-    private string _context;
+    private static readonly ConcurrentDictionary<string, Dictionary<string, string>> _cache = new();
+
+    private Dictionary<string, string> _localizations = [];
     private readonly TranslatorOptions _options;
 
+    private string _context;
     private string _resourcePath;
     private string _resourceName;
-    private string _resourceFullPath;
     private string _culture;
 
+    private readonly HttpClient? _httpClient;
+
+    private bool _isInitialized;
+
+    public string CurrentCulture => _culture;
+
+    // SERVER
     public AppTranslator(IOptions<TranslatorOptions> options)
     {
-        _context = options.Value.DefaultContext;
         _options = options.Value;
-        _localizations = LoadLocalizations();
-        SetFullPath(
-            _options.ResourcesPath ?? AppTranslatorConstants.DefaultResourcesPath, 
-            _options.ResourceName ?? AppTranslatorConstants.DefaultResourcesName, 
-            _options.DefaultLanguage ?? AppTranslatorConstants.DefaultLanguage);
+        _context = _options.DefaultContext;
+
+        _resourcePath = _options.ResourcesPath ?? AppTranslatorConstants.DefaultResourcesPath;
+        _resourceName = _options.ResourceName ?? AppTranslatorConstants.DefaultResourcesName;
+        _culture = _options.DefaultLanguage ?? AppTranslatorConstants.DefaultLanguage;
     }
 
-    private void SetFullPath(string resourcePath, string resourceName, string culture = null)
+    // WASM
+    public AppTranslator(IOptions<TranslatorOptions> options, HttpClient httpClient) : this(options)
     {
-        _resourcePath = resourcePath;
-        _resourceName = resourceName;
-        if (!string.IsNullOrWhiteSpace(culture))
-            _culture = culture;
-
-        _resourceFullPath = Path.Combine(_resourcePath, $"{_resourceName}.{_culture}.json");
+        _httpClient = httpClient;
     }
 
-    private Dictionary<string, string> LoadLocalizations()
+    private string BuildCacheKey(string culture)
+        => $"{_resourcePath}/{_resourceName}.{culture}.json::{_context}";
+
+    private string BuildFilePath(string culture)
+        => Path.Combine(_resourcePath, $"{_resourceName}.{culture}.json");
+
+    public async Task PreloadAsync()
     {
-        if (_options is null || _resourceName is null)
-            return [];
+        if (_options.LoadAllLocaleResources)
+        {
+            var langs = (_options.Languages ?? _culture)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        var resourceFile = _resourceFullPath;
-        if (!File.Exists(resourceFile))
-            resourceFile = Path.Combine(_resourcePath, $"{_resourceName}.{"pt-BR"}.json");
-        if (!File.Exists(resourceFile))
-            resourceFile = Path.Combine(_resourcePath, $"{_resourceName}.{"en"}.json");
-        if (!File.Exists(resourceFile))
-            throw new FileNotFoundException($"Localization file not found: {_resourceFullPath}");
+            foreach (var lang in langs)
+                await LoadLanguageAsync(lang);
+        }
+        else
+        {
+            await LoadLanguageAsync(_culture);
+        }
 
-        _resourceFullPath = resourceFile;
+        _isInitialized = true;
+    }
 
+    public void Initialize()
+    {
+        if (_httpClient != null)
+            throw new InvalidOperationException("Use PreloadAsync() for WASM.");
+
+        LoadLanguageSync(_culture);
+
+        _isInitialized = true;
+    }
+
+    public async Task SetLanguageAsync(string culture)
+    {
+        if (_culture == culture)
+            return;
+
+        _culture = culture;
+
+        if (!_cache.ContainsKey(BuildCacheKey(culture)))
+            await LoadLanguageAsync(culture);
+
+        _localizations = _cache[BuildCacheKey(culture)];
+    }
+
+    public void SetLanguage(string culture)
+    {
+        if (_culture == culture)
+            return;
+
+        _culture = culture;
+
+        if (!_cache.ContainsKey(BuildCacheKey(culture)))
+            LoadLanguageSync(culture);
+
+        _localizations = _cache[BuildCacheKey(culture)];
+    }
+
+    private async Task LoadLanguageAsync(string culture)
+    {
+        var key = BuildCacheKey(culture);
+
+        if (_cache.ContainsKey(key))
+        {
+            _localizations = _cache[key];
+            return;
+        }
+
+        var json = await GetJsonAsync(culture);
+
+        var dict = ParseJson(json);
+
+        _cache[key] = dict;
+
+        if (culture == _culture)
+            _localizations = dict;
+    }
+
+    private void LoadLanguageSync(string culture)
+    {
+        var key = BuildCacheKey(culture);
+
+        if (_cache.ContainsKey(key))
+        {
+            _localizations = _cache[key];
+            return;
+        }
+
+        var json = File.ReadAllText(BuildFilePath(culture));
+
+        var dict = ParseJson(json);
+
+        _cache[key] = dict;
+
+        if (culture == _culture)
+            _localizations = dict;
+    }
+
+    private async Task<string> GetJsonAsync(string culture)
+    {
+        var file = BuildFilePath(culture);
+
+        if (_httpClient == null)
+            return await File.ReadAllTextAsync(file);
+
+        return await _httpClient.GetStringAsync(file);
+    }
+
+    private Dictionary<string, string> ParseJson(string json)
+    {
         if (string.IsNullOrWhiteSpace(_context))
-            return LoadWithoutContext();
+            return json.Deserialize<Dictionary<string, string>>();
 
-        return LoadWithContext();
-    }
+        using var doc = JsonDocument.Parse(json);
 
-    private Dictionary<string, string> LoadWithContext()
-    {
-        var jsonDocument = JsonDocument.Parse(File.ReadAllText(_resourceFullPath));
-        if (!jsonDocument.RootElement.TryGetProperty(_context, out JsonElement contextResult))
+        if (!doc.RootElement.TryGetProperty(_context, out var ctx))
             return [];
 
-        var result = JsonSerializer.Deserialize<Dictionary<string, string>>(contextResult.GetRawText());
-        _localizations = result;
-        return result;
-    }
-    private Dictionary<string, string> LoadWithoutContext()
-    {
-        var json = File.ReadAllText(_resourceFullPath);
-        if (string.IsNullOrWhiteSpace(json))
-            return [];
-
-        var result = json.Deserialize<Dictionary<string, string>>();
-        _localizations = result;
-        return result;
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(ctx.GetRawText())!;
     }
 
     public LocalizedString this[string name]
     {
         get
         {
-            var value = _localizations.ContainsKey(name) ? _localizations[name] : name;
-            return new (name, value);
+            if (!_isInitialized)
+                throw new InvalidOperationException("Translator not initialized.");
+
+            return _localizations.TryGetValue(name, out var value)
+                ? new LocalizedString(name, value)
+                : new LocalizedString(name, name);
         }
     }
 
@@ -96,24 +184,45 @@ public class AppTranslator : IAppTranslator
     {
         get
         {
-            var value = _localizations.ContainsKey(name) ? string.Format(_localizations[name], arguments) : name;
-            return new (name, value);
+            if (!_isInitialized)
+                throw new InvalidOperationException("Translator not initialized.");
+
+            if (_localizations.TryGetValue(name, out var value))
+                return new LocalizedString(name, string.Format(value, arguments));
+
+            return new LocalizedString(name, name);
         }
     }
 
     public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
-        => _localizations.Select(l => new LocalizedString(l.Key, l.Value)).ToList();
-
-    public AppTranslator SetFileResource(string path, string name, string context = null, string culture = null)
     {
-        SetFullPath(path, name, culture);
-        return SetContext(context);
+        if (!_isInitialized)
+            return [];
+
+        return _localizations.Select(x => new LocalizedString(x.Key, x.Value));
     }
 
-    public AppTranslator SetContext(string context)
+    public IAppTranslator SetContext(string context)
     {
         _context = context;
-        _ = LoadLocalizations();
+
+        if (_cache.ContainsKey(BuildCacheKey(_culture)))
+            _localizations = _cache[BuildCacheKey(_culture)];
+
+        return this;
+    }
+
+    public IAppTranslator SetFileResource(string path, string name, string context = null, string culture = null)
+    {
+        _resourcePath = path;
+        _resourceName = name;
+
+        if (context != null)
+            _context = context;
+
+        if (culture != null)
+            _culture = culture;
+
         return this;
     }
 }
